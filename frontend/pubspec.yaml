@@ -1,0 +1,32 @@
+name: ai_gym_coach
+description: AI-powered fitness coaching app with real-time pose detection
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Camera
+  camera: ^0.10.5+5
+  camera_windows: ^0.2.1+6
+  
+  # ML Kit Pose Detection
+  google_mlkit_pose_detection: ^0.11.0
+  
+  # Permissions
+  permission_handler: ^11.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
