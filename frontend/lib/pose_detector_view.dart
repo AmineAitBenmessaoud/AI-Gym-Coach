@@ -33,8 +33,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   String? _errorMessage;
   bool _showCalibration = false;
   double _calibrationOffsetX = 0.0;
-  double _calibrationOffsetY = 0.0;
-  double _calibrationScale = 1.0;
+  double _calibrationOffsetY = -82.0;
+  double _calibrationScale = 0.91;
 
   @override
   void initState() {
@@ -345,8 +345,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                         onPressed: () {
                           setState(() {
                             _calibrationOffsetX = 0;
-                            _calibrationOffsetY = 0;
-                            _calibrationScale = 1.0;
+                            _calibrationOffsetY = -82.0;
+                            _calibrationScale = 0.91;
                           });
                         },
                         style: ElevatedButton.styleFrom(
