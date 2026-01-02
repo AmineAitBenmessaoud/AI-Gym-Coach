@@ -37,6 +37,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   bool _isAnalyzing = false;
   Map<String, dynamic>? _lastAnalysis;
   bool _enableRealTimeFeedback = false;
+  double _calibrationOffsetX = 0.0;
   double _calibrationOffsetY = -82.0;
   double _calibrationScale = 0.91;
   RepState _currentRepState = RepState.idle;
