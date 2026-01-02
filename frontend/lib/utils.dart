@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
@@ -77,33 +76,6 @@ class CoordinateTranslator {
     scaledY += calibrationOffsetY;
     
     return Offset(scaledX, scaledY);
-  }
-
-  /// Rotates an offset based on the image rotation
-  Offset _rotateOffset(
-    Offset offset,
-    Size imageSize,
-    InputImageRotation rotation,
-  ) {
-    switch (rotation) {
-      case InputImageRotation.rotation0deg:
-        return offset;
-      case InputImageRotation.rotation90deg:
-        return Offset(
-          imageSize.height - offset.dy,
-          offset.dx,
-        );
-      case InputImageRotation.rotation180deg:
-        return Offset(
-          imageSize.width - offset.dx,
-          imageSize.height - offset.dy,
-        );
-      case InputImageRotation.rotation270deg:
-        return Offset(
-          offset.dy,
-          imageSize.width - offset.dx,
-        );
-    }
   }
 }
 

@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'pose_painter.dart';
 import 'utils.dart';
+import 'services/pose_analysis_service.dart';
 
 /// State provider for available cameras
 final camerasProvider = FutureProvider<List<CameraDescription>>((ref) async {
@@ -35,6 +34,10 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   double _calibrationOffsetX = 0.0;
   double _calibrationOffsetY = 0.0;
   double _calibrationScale = 1.0;
+  String? _selectedExercise = 'squat'; // Exercise being performed
+  bool _isAnalyzing = false;
+  Map<String, dynamic>? _lastAnalysis;
+  bool _enableRealTimeFeedback = false;
 
   @override
   void initState() {
@@ -112,6 +115,11 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
           _debugMessage = 'Processing: ${poses.length} pose(s) detected';
           _errorMessage = null;
         });
+
+        // Send poses for real-time feedback if enabled
+        if (_enableRealTimeFeedback && poses.isNotEmpty && _selectedExercise != null) {
+          _getRealTimeFeedback(poses);
+        }
       }
     } catch (e) {
       print('Error processing image: $e');
@@ -165,6 +173,74 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     await _initializeCamera(newIndex);
   }
 
+  /// Get real-time feedback from backend
+  Future<void> _getRealTimeFeedback(List<Pose> poses) async {
+    if (_selectedExercise == null) return;
+
+    try {
+      final result = await PoseAnalysisService.getRealTimeFeedback(
+        poses,
+        exerciseName: _selectedExercise!,
+      );
+
+      if (result['success'] == true && mounted) {
+        final feedback = result['feedback'] ?? {};
+        setState(() {
+          _debugMessage = feedback['immediate_action'] ?? 'Analysis in progress...';
+        });
+      }
+    } catch (e) {
+      print('Error getting real-time feedback: $e');
+    }
+  }
+
+  /// Send poses for detailed analysis (button action)
+  Future<void> _analyzePoses() async {
+    if (_poses.isEmpty) {
+      setState(() {
+        _errorMessage = 'No poses detected. Please position yourself in front of the camera.';
+      });
+      return;
+    }
+
+    if (_selectedExercise == null) {
+      setState(() {
+        _errorMessage = 'Please select an exercise first.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isAnalyzing = true;
+    });
+
+    try {
+      final result = await PoseAnalysisService.analyzePoses(
+        _poses,
+        exerciseName: _selectedExercise!,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          if (result['success'] == true) {
+            _lastAnalysis = result['analysis'];
+            _errorMessage = null;
+          } else {
+            _errorMessage = result['error'] ?? 'Analysis failed';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _errorMessage = 'Error: $e';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final camerasAsync = ref.watch(camerasProvider);
@@ -187,6 +263,19 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
               });
             },
             tooltip: 'Calibrate Skeleton',
+          ),
+          // Real-time feedback toggle
+          IconButton(
+            icon: Icon(
+              _enableRealTimeFeedback ? Icons.feedback : Icons.feedback_outlined,
+              color: _enableRealTimeFeedback ? Colors.green : Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _enableRealTimeFeedback = !_enableRealTimeFeedback;
+              });
+            },
+            tooltip: 'Real-time Feedback',
           ),
           // Camera flip button
           IconButton(
@@ -423,6 +512,196 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
             ),
           ),
         ),
+
+        // Exercise selection and analysis panel
+        Positioned(
+          top: 80,
+          right: 16,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Exercise:',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedExercise,
+                    dropdownColor: Colors.black87,
+                    style: const TextStyle(color: Colors.white),
+                    items: [
+                      'squat',
+                      'push-up',
+                      'deadlift',
+                      'bench press',
+                      'pull-up',
+                      'running',
+                      'other',
+                    ]
+                        .map((exercise) => DropdownMenuItem(
+                              value: exercise,
+                              child: Text(exercise),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedExercise = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: _isAnalyzing ? null : _analyzePoses,
+                  icon: _isAnalyzing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.analytics),
+                  label: const Text('Analyze'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Analysis results panel
+        if (_lastAnalysis != null)
+          Positioned(
+            top: 80,
+            left: 16,
+            right: 100,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Analysis Results',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Form Score: ${_lastAnalysis!['form_score'] ?? "N/A"}/10',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (_lastAnalysis!['issues'] != null &&
+                        (_lastAnalysis!['issues'] as List).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Issues:',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            ...((_lastAnalysis!['issues'] as List)
+                                    .cast<String>())
+                                .map((issue) => Text(
+                                      '• $issue',
+                                      style: const TextStyle(
+                                        color: Colors.redAccent,
+                                        fontSize: 10,
+                                      ),
+                                    )),
+                          ],
+                        ),
+                      ),
+                    if (_lastAnalysis!['corrections'] != null &&
+                        (_lastAnalysis!['corrections'] as List).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Corrections:',
+                              style: TextStyle(
+                                color: Colors.yellowAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            ...((_lastAnalysis!['corrections'] as List)
+                                    .cast<String>())
+                                .map((correction) => Text(
+                                      '• $correction',
+                                      style: const TextStyle(
+                                        color: Colors.yellowAccent,
+                                        fontSize: 10,
+                                      ),
+                                    )),
+                          ],
+                        ),
+                      ),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _lastAnalysis = null;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                      ),
+                      child: const Text(
+                        'Dismiss',
+                        style: TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
