@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
@@ -25,7 +24,7 @@ class CoordinateTranslator {
   });
 
   /// Translates a PoseLandmark to screen coordinates.
-  /// 
+  ///
   /// This matches how CameraPreview scales the camera feed to the screen.
   Offset getOffset(PoseLandmark landmark) {
     double x = landmark.x;
@@ -33,37 +32,37 @@ class CoordinateTranslator {
 
     // CameraPreview uses "cover" mode: scales to fill, crops overflow
     // We need to use the same scale factor to match
-    
+
     double scaleX = screenSize.width / imageSize.width;
     double scaleY = screenSize.height / imageSize.height;
-    
+
     // Use the LARGER scale (this fills the screen and crops overflow)
     double scale = scaleX > scaleY ? scaleX : scaleY;
-    
+
     // Apply uniform scaling
     double scaledX = x * scale;
     double scaledY = y * scale;
-    
+
     // Only apply offset for letterboxed dimension (positive offset)
     // For cropped dimension (negative offset), center the crop
     double offsetX = (screenSize.width - imageSize.width * scale) / 2;
     double offsetY = (screenSize.height - imageSize.height * scale) / 2;
-    
+
     // Only add positive offsets (letterboxing), for negative (cropping) we need to shift
     if (offsetX < 0) {
       // Width is being cropped - center the crop
       scaledX += offsetX;
     }
     if (offsetY < 0) {
-      // Height is being cropped - center the crop  
+      // Height is being cropped - center the crop
       scaledY += offsetY;
     }
-    
+
     // Handle front camera mirroring
     if (cameraLensDirection == CameraLensDirection.front) {
       scaledX = screenSize.width - scaledX;
     }
-    
+
     // Apply user scale adjustment (scale from center)
     if (calibrationScale != 1.0) {
       double centerX = screenSize.width / 2;
@@ -71,39 +70,12 @@ class CoordinateTranslator {
       scaledX = centerX + (scaledX - centerX) * calibrationScale;
       scaledY = centerY + (scaledY - centerY) * calibrationScale;
     }
-    
+
     // Apply user position adjustments
     scaledX += calibrationOffsetX;
     scaledY += calibrationOffsetY;
-    
-    return Offset(scaledX, scaledY);
-  }
 
-  /// Rotates an offset based on the image rotation
-  Offset _rotateOffset(
-    Offset offset,
-    Size imageSize,
-    InputImageRotation rotation,
-  ) {
-    switch (rotation) {
-      case InputImageRotation.rotation0deg:
-        return offset;
-      case InputImageRotation.rotation90deg:
-        return Offset(
-          imageSize.height - offset.dy,
-          offset.dx,
-        );
-      case InputImageRotation.rotation180deg:
-        return Offset(
-          imageSize.width - offset.dx,
-          imageSize.height - offset.dy,
-        );
-      case InputImageRotation.rotation270deg:
-        return Offset(
-          offset.dy,
-          imageSize.width - offset.dx,
-        );
-    }
+    return Offset(scaledX, scaledY);
   }
 }
 
