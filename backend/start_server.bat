@@ -5,7 +5,7 @@ echo ===================================
 echo.
 
 REM Set environment variables directly
-set GEMINI_API_KEY=AIzaSyA3W9_sRkV2BPNhrQYgRod9TxW6sSPc5c0
+set GEMINI_API_KEY=CLE_API_HERE
 set GEMINI_MODEL=gemini-1.5-flash
 set FLASK_HOST=0.0.0.0
 set FLASK_PORT=5000
