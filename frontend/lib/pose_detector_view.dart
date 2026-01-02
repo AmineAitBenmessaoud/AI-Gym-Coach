@@ -6,6 +6,7 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'pose_painter.dart';
 import 'utils.dart';
 import 'services/pose_analysis_service.dart';
+import 'rep_detector.dart';
 
 /// State provider for available cameras
 final camerasProvider = FutureProvider<List<CameraDescription>>((ref) async {
@@ -23,6 +24,7 @@ class PoseDetectorView extends ConsumerStatefulWidget {
 class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   CameraController? _cameraController;
   PoseDetector? _poseDetector;
+  RepetitionDetector? _repetitionDetector;
   bool _isProcessing = false;
   bool _isCameraInitialized = false;
   List<Pose> _poses = [];
@@ -31,18 +33,20 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   String _debugMessage = '';
   String? _errorMessage;
   bool _showCalibration = false;
-  double _calibrationOffsetX = 0.0;
-  double _calibrationOffsetY = 0.0;
-  double _calibrationScale = 1.0;
   String? _selectedExercise = 'squat'; // Exercise being performed
   bool _isAnalyzing = false;
   Map<String, dynamic>? _lastAnalysis;
   bool _enableRealTimeFeedback = false;
+  double _calibrationOffsetY = -82.0;
+  double _calibrationScale = 0.91;
+  RepState _currentRepState = RepState.idle;
+  int _captureCount = 0;
 
   @override
   void initState() {
     super.initState();
     _initializePoseDetector();
+    _repetitionDetector = RepetitionDetector();
   }
 
   /// Initialize the ML Kit Pose Detector
@@ -111,7 +115,27 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       // Run pose detection
       final poses = await _poseDetector!.processImage(inputImage);
 
-      if (mounted) {
+      // Process with RepetitionDetector if pose detected
+      if (poses.isNotEmpty && _repetitionDetector != null) {
+        final detectionResult = _repetitionDetector!.processFrame(poses.first);
+
+        // Check if we should capture at bottom of squat
+        if (detectionResult['shouldCapture'] == true) {
+          captureSnapshot(poses.first, inputImage);
+        }
+
+        // Update UI with detection state
+        if (mounted) {
+          setState(() {
+            _poses = poses;
+            _currentRepState = detectionResult['currentState'];
+            final message = detectionResult['message'] ?? '';
+            _debugMessage =
+                'State: ${_currentRepState.name} | Captures: $_captureCount | $message';
+            _errorMessage = detectionResult['error'];
+          });
+        }
+      } else if (mounted) {
         setState(() {
           _poses = poses;
           _debugMessage = 'Processing: ${poses.length} pose(s) detected';
@@ -135,6 +159,49 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     }
 
     _isProcessing = false;
+  }
+
+  /// Capture snapshot at the bottom of the squat
+  /// This function is called when the RepetitionDetector identifies the inflection point
+  ///
+  /// In Phase 3, this is where you'll:
+  /// 1. Convert the image to a format suitable for Gemini API
+  /// 2. Extract relevant pose data
+  /// 3. Send to backend for AI analysis
+  void captureSnapshot(Pose pose, InputImage image) {
+    _captureCount++;
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('📸 SNAPSHOT CAPTURED AT BOTTOM OF SQUAT #$_captureCount');
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print(
+        'Image: ${image.metadata?.size.width}x${image.metadata?.size.height}');
+    print('Pose landmarks: ${pose.landmarks.length}');
+
+    // Extract key landmarks for analysis
+    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
+    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
+
+    if (leftKnee != null &&
+        rightKnee != null &&
+        leftHip != null &&
+        rightHip != null) {
+      print(
+          'Hip position: L(${leftHip.x.toInt()}, ${leftHip.y.toInt()}) R(${rightHip.x.toInt()}, ${rightHip.y.toInt()})');
+      print(
+          'Knee position: L(${leftKnee.x.toInt()}, ${leftKnee.y.toInt()}) R(${rightKnee.x.toInt()}, ${rightKnee.y.toInt()})');
+    }
+
+    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    print('');
+
+    // TODO Phase 3: Replace this with actual API call to Gemini
+    // Example:
+    // final imageBytes = await convertInputImageToBytes(image);
+    // final analysis = await sendToGeminiAPI(imageBytes, pose);
+    // showAnalysisResults(analysis);
   }
 
   /// Convert CameraImage to InputImage for ML Kit
@@ -438,8 +505,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                         onPressed: () {
                           setState(() {
                             _calibrationOffsetX = 0;
-                            _calibrationOffsetY = 0;
-                            _calibrationScale = 1.0;
+                            _calibrationOffsetY = -82.0;
+                            _calibrationScale = 0.91;
                           });
                         },
                         style: ElevatedButton.styleFrom(
