@@ -49,7 +49,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   /// Using ACCURATE mode for better precision (can switch to STREAM for FPS)
   void _initializePoseDetector() {
     final options = PoseDetectorOptions(
-      mode: PoseDetectionMode.stream, // Use stream mode for real-time performance
+      mode:
+          PoseDetectionMode.stream, // Use stream mode for real-time performance
       model: PoseDetectionModel.accurate, // Accurate model for better detection
     );
     _poseDetector = PoseDetector(options: options);
@@ -67,12 +68,13 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       camera,
       ResolutionPreset.high,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420, // Efficient format for ML processing
+      imageFormatGroup:
+          ImageFormatGroup.yuv420, // Efficient format for ML processing
     );
 
     try {
       await _cameraController!.initialize();
-      
+
       if (!mounted) return;
 
       setState(() {
@@ -108,7 +110,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
       // Run pose detection
       final poses = await _poseDetector!.processImage(inputImage);
-      
+
       if (mounted) {
         setState(() {
           _poses = poses;
@@ -117,7 +119,9 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         });
 
         // Send poses for real-time feedback if enabled
-        if (_enableRealTimeFeedback && poses.isNotEmpty && _selectedExercise != null) {
+        if (_enableRealTimeFeedback &&
+            poses.isNotEmpty &&
+            _selectedExercise != null) {
           _getRealTimeFeedback(poses);
         }
       }
@@ -159,10 +163,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       bytesPerRow: image.planes[0].bytesPerRow,
     );
 
-    return InputImage.fromBytes(
-      bytes: bytes,
-      metadata: inputImageData,
-    );
+    return InputImage.fromBytes(bytes: bytes, metadata: inputImageData);
   }
 
   /// Flip between front and back camera
@@ -186,7 +187,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       if (result['success'] == true && mounted) {
         final feedback = result['feedback'] ?? {};
         setState(() {
-          _debugMessage = feedback['immediate_action'] ?? 'Analysis in progress...';
+          _debugMessage =
+              feedback['immediate_action'] ?? 'Analysis in progress...';
         });
       }
     } catch (e) {
@@ -198,7 +200,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   Future<void> _analyzePoses() async {
     if (_poses.isEmpty) {
       setState(() {
-        _errorMessage = 'No poses detected. Please position yourself in front of the camera.';
+        _errorMessage =
+            'No poses detected. Please position yourself in front of the camera.';
       });
       return;
     }
@@ -267,7 +270,9 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
           // Real-time feedback toggle
           IconButton(
             icon: Icon(
-              _enableRealTimeFeedback ? Icons.feedback : Icons.feedback_outlined,
+              _enableRealTimeFeedback
+                  ? Icons.feedback
+                  : Icons.feedback_outlined,
               color: _enableRealTimeFeedback ? Colors.green : Colors.white,
             ),
             onPressed: () {
@@ -301,9 +306,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
           return _buildCameraView();
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Colors.green),
-        ),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(color: Colors.green)),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -546,20 +550,23 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                     value: _selectedExercise,
                     dropdownColor: Colors.black87,
                     style: const TextStyle(color: Colors.white),
-                    items: [
-                      'squat',
-                      'push-up',
-                      'deadlift',
-                      'bench press',
-                      'pull-up',
-                      'running',
-                      'other',
-                    ]
-                        .map((exercise) => DropdownMenuItem(
-                              value: exercise,
-                              child: Text(exercise),
-                            ))
-                        .toList(),
+                    items:
+                        [
+                              'squat',
+                              'push-up',
+                              'deadlift',
+                              'bench press',
+                              'pull-up',
+                              'running',
+                              'other',
+                            ]
+                            .map(
+                              (exercise) => DropdownMenuItem(
+                                value: exercise,
+                                child: Text(exercise),
+                              ),
+                            )
+                            .toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedExercise = value;
@@ -576,8 +583,9 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Icon(Icons.analytics),
@@ -620,10 +628,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                     const SizedBox(height: 8),
                     Text(
                       'Form Score: ${_lastAnalysis!['form_score'] ?? "N/A"}/10',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     if (_lastAnalysis!['issues'] != null &&
                         (_lastAnalysis!['issues'] as List).isNotEmpty)
@@ -642,13 +647,15 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                             ),
                             ...((_lastAnalysis!['issues'] as List)
                                     .cast<String>())
-                                .map((issue) => Text(
-                                      '• $issue',
-                                      style: const TextStyle(
-                                        color: Colors.redAccent,
-                                        fontSize: 10,
-                                      ),
-                                    )),
+                                .map(
+                                  (issue) => Text(
+                                    '• $issue',
+                                    style: const TextStyle(
+                                      color: Colors.redAccent,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
                           ],
                         ),
                       ),
@@ -669,13 +676,15 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                             ),
                             ...((_lastAnalysis!['corrections'] as List)
                                     .cast<String>())
-                                .map((correction) => Text(
-                                      '• $correction',
-                                      style: const TextStyle(
-                                        color: Colors.yellowAccent,
-                                        fontSize: 10,
-                                      ),
-                                    )),
+                                .map(
+                                  (correction) => Text(
+                                    '• $correction',
+                                    style: const TextStyle(
+                                      color: Colors.yellowAccent,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
                           ],
                         ),
                       ),

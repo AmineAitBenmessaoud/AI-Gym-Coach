@@ -55,9 +55,7 @@ class RealTimeFeedback {
     final feedback = json['feedback'] ?? {};
     return RealTimeFeedback(
       success: true,
-      criticalIssues: List<String>.from(
-        feedback['critical_issues'] ?? [],
-      ),
+      criticalIssues: List<String>.from(feedback['critical_issues'] ?? []),
       immediateAction: feedback['immediate_action'],
     );
   }

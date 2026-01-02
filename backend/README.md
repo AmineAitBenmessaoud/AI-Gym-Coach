@@ -15,6 +15,7 @@ Flask API backend for analyzing exercise form using pose detection data and Goog
 ## 🚀 Quick Start
 
 ### 1. Create Virtual Environment
+
 ```bash
 python -m venv venv
 venv\Scripts\activate  # On Windows
@@ -22,19 +23,23 @@ source venv/bin/activate  # On macOS/Linux
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 3. Configure API Key
+
 1. Get your Google Generative AI API key from [ai.google.dev](https://ai.google.dev/)
 2. Copy `.env.example` to `.env`
 3. Add your API key to `.env`:
+
 ```env
 GEMINI_API_KEY=your_actual_api_key_here
 ```
 
 ### 4. Run the Server
+
 ```bash
 # Using the start script (Windows)
 start.bat
@@ -48,11 +53,13 @@ The server will run on `http://localhost:5000`
 ## 📡 API Endpoints
 
 ### Health Check
+
 **GET** `/health`
 
 Check if the service is running and view configuration.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -63,11 +70,13 @@ Check if the service is running and view configuration.
 ```
 
 ### Analyze Poses
+
 **POST** `/analyze-poses`
 
 Analyze pose data and provide detailed form feedback.
 
 **Request Body:**
+
 ```json
 {
   "poses": [
@@ -84,6 +93,7 @@ Analyze pose data and provide detailed form feedback.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -91,7 +101,10 @@ Analyze pose data and provide detailed form feedback.
     "exercise_name": "squat",
     "form_score": 8.5,
     "issues": ["Knees caving slightly inward", "Back rounding at bottom"],
-    "corrections": ["Push knees outward aligned with toes", "Maintain neutral spine throughout"],
+    "corrections": [
+      "Push knees outward aligned with toes",
+      "Maintain neutral spine throughout"
+    ],
     "positives": ["Good depth", "Feet positioned well", "Controlled tempo"],
     "overall_feedback": "Solid squat form with minor adjustments needed..."
   }
@@ -99,11 +112,13 @@ Analyze pose data and provide detailed form feedback.
 ```
 
 ### Real-time Feedback
+
 **POST** `/real-time-feedback`
 
 Get quick, critical feedback for real-time coaching.
 
 **Request Body:**
+
 ```json
 {
   "poses": [...],
@@ -112,6 +127,7 @@ Get quick, critical feedback for real-time coaching.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -147,15 +163,15 @@ FLASK_DEBUG=true
 
 ## 🏋️ Supported Exercises
 
-| Exercise      | Key Landmarks Monitored |
-|---------------|------------------------|
-| **Squat**     | Hips, Knees, Ankles, Shoulders |
-| **Push-up**   | Shoulders, Elbows, Wrists, Hips |
-| **Deadlift**  | Hips, Knees, Shoulders, Ankles |
-| **Bench Press** | Shoulders, Elbows, Wrists |
-| **Pull-up**   | Shoulders, Elbows, Wrists, Hips |
-| **Plank**     | Shoulders, Elbows, Hips, Ankles |
-| **Lunge**     | Hips, Knees, Ankles, Shoulders |
+| Exercise        | Key Landmarks Monitored         |
+| --------------- | ------------------------------- |
+| **Squat**       | Hips, Knees, Ankles, Shoulders  |
+| **Push-up**     | Shoulders, Elbows, Wrists, Hips |
+| **Deadlift**    | Hips, Knees, Shoulders, Ankles  |
+| **Bench Press** | Shoulders, Elbows, Wrists       |
+| **Pull-up**     | Shoulders, Elbows, Wrists, Hips |
+| **Plank**       | Shoulders, Elbows, Hips, Ankles |
+| **Lunge**       | Hips, Knees, Ankles, Shoulders  |
 
 ## 🔧 Architecture
 
@@ -181,6 +197,7 @@ Backend Architecture:
 ## 🛠️ Development
 
 ### Project Structure
+
 ```
 backend/
 ├── app.py              # Main Flask application
@@ -217,6 +234,7 @@ EXERCISE_LANDMARKS = {
 ## 📝 Logging
 
 The application logs important events:
+
 - API requests and responses
 - Gemini API calls
 - Errors and warnings
@@ -227,15 +245,19 @@ Logs include timestamps and log levels (INFO, WARNING, ERROR).
 ## 🐛 Troubleshooting
 
 **Issue**: `GEMINI_API_KEY not found`
+
 - Solution: Create `.env` file from `.env.example` and add your API key
 
 **Issue**: `Import "flask" could not be resolved`
+
 - Solution: Activate virtual environment and run `pip install -r requirements.txt`
 
 **Issue**: Slow responses
+
 - Solution: Use `gemini-1.5-flash` model, reduce `GEMINI_MAX_TOKENS`
 
 **Issue**: Inconsistent JSON responses
+
 - Solution: Lower `GEMINI_TEMPERATURE` (try 0.5-0.6)
 
 ## 📄 License
@@ -258,6 +280,7 @@ See LICENSE file in root directory.
 ## Setup
 
 ### 1. Create Virtual Environment
+
 ```bash
 python -m venv venv
 venv\Scripts\activate  # On Windows
@@ -265,19 +288,23 @@ source venv/bin/activate  # On macOS/Linux
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 3. Configure API Key
+
 1. Get your Google Generative AI API key from [ai.google.dev](https://ai.google.dev/)
 2. Copy `.env.example` to `.env`
 3. Add your API key to `.env`:
+
 ```
 GEMINI_API_KEY=your_actual_api_key_here
 ```
 
 ### 4. Run the Server
+
 ```bash
 python app.py
 ```
@@ -287,11 +314,13 @@ The server will run on `http://localhost:5000`
 ## API Endpoints
 
 ### Health Check
+
 **GET** `/health`
 
 Check if the service is running.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -300,11 +329,13 @@ Check if the service is running.
 ```
 
 ### Analyze Poses
+
 **POST** `/analyze-poses`
 
 Analyze pose data and provide detailed form feedback.
 
 **Request Body:**
+
 ```json
 {
   "poses": [
@@ -321,6 +352,7 @@ Analyze pose data and provide detailed form feedback.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -336,11 +368,13 @@ Analyze pose data and provide detailed form feedback.
 ```
 
 ### Real-time Feedback
+
 **POST** `/real-time-feedback`
 
 Get quick, critical feedback for real-time coaching.
 
 **Request Body:**
+
 ```json
 {
   "poses": [...],
@@ -349,6 +383,7 @@ Get quick, critical feedback for real-time coaching.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,

@@ -8,7 +8,7 @@ class PoseAnalysisService {
   // Change cette URL selon votre configuration (localhost pour dev, IP du serveur pour prod)
   static const String baseUrl = 'http://localhost:5000';
   static const Duration timeout = Duration(seconds: 30);
-  
+
   // Cache pour éviter trop d'appels API
   static DateTime? _lastAnalysisTime;
   static const Duration _analysisThrottle = Duration(seconds: 2);
@@ -16,11 +16,11 @@ class PoseAnalysisService {
   /// Convertit une Pose en JSON pour envoi au backend
   static Map<String, dynamic> _poseToJson(Pose pose) {
     final landmarks = <String, dynamic>{};
-    
+
     // Optimisation: envoyer seulement les landmarks avec une bonne confiance
     for (var entry in pose.landmarks.entries) {
       final landmark = entry.value;
-      
+
       // Filter par confiance (>0.5 = bonne détection)
       if (landmark.likelihood > 0.5) {
         landmarks[entry.key.toString().split('.').last] = {
@@ -32,9 +32,7 @@ class PoseAnalysisService {
       }
     }
 
-    return {
-      'landmarks': landmarks,
-    };
+    return {'landmarks': landmarks};
   }
 
   /// Envoie les poses au backend pour analyse détaillée
@@ -44,10 +42,7 @@ class PoseAnalysisService {
   }) async {
     try {
       if (poses.isEmpty) {
-        return {
-          'success': false,
-          'error': 'Aucune pose détectée',
-        };
+        return {'success': false, 'error': 'Aucune pose détectée'};
       }
 
       // Optimisation: prendre seulement la première pose (la plus confiante généralement)
@@ -82,10 +77,7 @@ class PoseAnalysisService {
         'error': 'Délai d\'attente dépassé. Vérifiez votre connexion.',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'error': 'Erreur de connexion: $e',
-      };
+      return {'success': false, 'error': 'Erreur de connexion: $e'};
     }
   }
 
@@ -99,20 +91,14 @@ class PoseAnalysisService {
       if (_lastAnalysisTime != null) {
         final timeSinceLastCall = DateTime.now().difference(_lastAnalysisTime!);
         if (timeSinceLastCall < _analysisThrottle) {
-          return {
-            'success': false,
-            'error': 'Throttled',
-          };
+          return {'success': false, 'error': 'Throttled'};
         }
       }
-      
+
       _lastAnalysisTime = DateTime.now();
 
       if (poses.isEmpty) {
-        return {
-          'success': false,
-          'error': 'Aucune pose détectée',
-        };
+        return {'success': false, 'error': 'Aucune pose détectée'};
       }
 
       // Optimisation: seulement la première pose pour le temps réel
@@ -125,12 +111,11 @@ class PoseAnalysisService {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
             },
-            body: jsonEncode({
-              'poses': posesJson,
-              'exercise': exerciseName,
-            }),
+            body: jsonEncode({'poses': posesJson, 'exercise': exerciseName}),
           )
-          .timeout(const Duration(seconds: 5)); // Timeout plus court pour le temps réel
+          .timeout(
+            const Duration(seconds: 5),
+          ); // Timeout plus court pour le temps réel
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -141,15 +126,9 @@ class PoseAnalysisService {
         };
       }
     } on TimeoutException {
-      return {
-        'success': false,
-        'error': 'Timeout',
-      };
+      return {'success': false, 'error': 'Timeout'};
     } catch (e) {
-      return {
-        'success': false,
-        'error': 'Erreur de connexion: $e',
-      };
+      return {'success': false, 'error': 'Erreur de connexion: $e'};
     }
   }
 
