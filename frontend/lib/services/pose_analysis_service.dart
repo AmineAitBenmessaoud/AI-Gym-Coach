@@ -6,7 +6,7 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 /// Service pour communiquer avec le backend et l'API Gemini
 class PoseAnalysisService {
   // Change cette URL selon votre configuration (localhost pour dev, IP du serveur pour prod)
-  static const String baseUrl = 'http://localhost:5000';
+  static const String baseUrl = 'http://192.168.1.19:5000';
   static const Duration timeout = Duration(seconds: 30);
 
   // Cache pour éviter trop d'appels API
