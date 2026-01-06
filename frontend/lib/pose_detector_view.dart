@@ -16,7 +16,9 @@ final camerasProvider = FutureProvider<List<CameraDescription>>((ref) async {
 
 /// Main view for pose detection with live camera feed
 class PoseDetectorView extends ConsumerStatefulWidget {
-  const PoseDetectorView({super.key});
+  final String? selectedExercise;
+
+  const PoseDetectorView({super.key, this.selectedExercise});
 
   @override
   ConsumerState<PoseDetectorView> createState() => _PoseDetectorViewState();
@@ -34,7 +36,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   String _debugMessage = '';
   String? _errorMessage;
   bool _showCalibration = false;
-  String? _selectedExercise = 'squat'; // Exercise being performed
+  String? _selectedExercise; // Exercise being performed
   bool _isAnalyzing = false;
   Map<String, dynamic>? _lastAnalysis;
   bool _enableRealTimeFeedback = false;
@@ -49,6 +51,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     super.initState();
     _initializePoseDetector();
     _repetitionDetector = RepetitionDetector();
+    _selectedExercise = widget.selectedExercise ?? 'squat';
   }
 
   /// Initialize the ML Kit Pose Detector
@@ -70,13 +73,13 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     await _cameraController?.dispose();
 
     final camera = _cameras[cameraIndex];
-    
+
     // Use platform-specific image format
     // Android works best with NV21, iOS with BGRA8888
-    final imageFormat = Platform.isAndroid 
-        ? ImageFormatGroup.nv21 
+    final imageFormat = Platform.isAndroid
+        ? ImageFormatGroup.nv21
         : ImageFormatGroup.bgra8888;
-    
+
     _cameraController = CameraController(
       camera,
       ResolutionPreset.high,
@@ -188,7 +191,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     print('📸 SNAPSHOT CAPTURED AT BOTTOM OF SQUAT #$_captureCount');
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     print(
-        'Image: ${image.metadata?.size.width}x${image.metadata?.size.height}');
+      'Image: ${image.metadata?.size.width}x${image.metadata?.size.height}',
+    );
     print('Pose landmarks: ${pose.landmarks.length}');
 
     // Extract key landmarks for analysis
@@ -202,9 +206,11 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         leftHip != null &&
         rightHip != null) {
       print(
-          'Hip position: L(${leftHip.x.toInt()}, ${leftHip.y.toInt()}) R(${rightHip.x.toInt()}, ${rightHip.y.toInt()})');
+        'Hip position: L(${leftHip.x.toInt()}, ${leftHip.y.toInt()}) R(${rightHip.x.toInt()}, ${rightHip.y.toInt()})',
+      );
       print(
-          'Knee position: L(${leftKnee.x.toInt()}, ${leftKnee.y.toInt()}) R(${rightKnee.x.toInt()}, ${rightKnee.y.toInt()})');
+        'Knee position: L(${leftKnee.x.toInt()}, ${leftKnee.y.toInt()}) R(${rightKnee.x.toInt()}, ${rightKnee.y.toInt()})',
+      );
     }
 
     print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -225,7 +231,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       );
 
       final format = InputImageFormatValue.fromRawValue(image.format.raw);
-      
+
       if (format == null) {
         print('Error: Unsupported image format raw value: ${image.format.raw}');
         print('Image format group: ${image.format.group}');
@@ -233,7 +239,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       }
 
       // Validate that format is supported by ML Kit
-      if (format != InputImageFormat.nv21 && 
+      if (format != InputImageFormat.nv21 &&
           format != InputImageFormat.yuv420 &&
           format != InputImageFormat.bgra8888) {
         print('Error: Format $format not supported by ML Kit');
@@ -252,7 +258,9 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
         format: format,
-        bytesPerRow: image.planes.isNotEmpty ? image.planes[0].bytesPerRow : image.width,
+        bytesPerRow: image.planes.isNotEmpty
+            ? image.planes[0].bytesPerRow
+            : image.width,
       );
 
       return InputImage.fromBytes(bytes: bytes, metadata: inputImageData);
