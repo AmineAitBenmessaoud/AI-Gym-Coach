@@ -8,6 +8,11 @@ import 'pose_painter.dart';
 import 'utils.dart';
 import 'services/pose_analysis_service.dart';
 import 'rep_detector.dart';
+import 'biomechanics/joint_angle_calculator.dart';
+import 'biomechanics/angle_smoother.dart';
+import 'biomechanics/exercise_spec.dart';
+import 'biomechanics/form_anomaly_detector.dart';
+import 'dart:async';
 
 /// State provider for available cameras
 final camerasProvider = FutureProvider<List<CameraDescription>>((ref) async {
@@ -46,12 +51,50 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   RepState _currentRepState = RepState.idle;
   int _captureCount = 0;
 
+  // Biomechanics layer
+  AngleSmoother? _angleSmoother;
+  FormAnomalyDetector? _formAnomalyDetector;
+  StreamSubscription<FormIssue>? _formIssueSubscription;
+  List<FormIssue> _currentFormIssues = [];
+  Map<String, double> _currentAngles = {};
+  Map<String, dynamic>? _aiCoaching; // Gemini coaching response
+
   @override
   void initState() {
     super.initState();
     _initializePoseDetector();
     _repetitionDetector = RepetitionDetector();
     _selectedExercise = widget.selectedExercise ?? 'squat';
+    _initializeBiomechanicsLayer();
+  }
+
+  /// Initialize biomechanics analysis layer
+  void _initializeBiomechanicsLayer() {
+    _angleSmoother = AngleSmoother(bufferSize: 5, alpha: 0.3);
+    
+    final exerciseSpec = ExerciseSpecs.getSpec(_selectedExercise ?? 'squat');
+    if (exerciseSpec != null) {
+      _formAnomalyDetector = FormAnomalyDetector(exerciseSpec);
+      
+      // Listen to form issues
+      _formIssueSubscription = _formAnomalyDetector!.issues.listen((issue) {
+        if (mounted) {
+          setState(() {
+            _currentFormIssues.add(issue);
+            // Keep only last 5 issues
+            if (_currentFormIssues.length > 5) {
+              _currentFormIssues.removeAt(0);
+            }
+          });
+          
+          // Call Gemini when critical or warning issues detected
+          if (issue.severity == FormIssueSeverity.critical ||
+              issue.severity == FormIssueSeverity.warning) {
+            _analyzeFormIssue(issue);
+          }
+        }
+      });
+    }
   }
 
   /// Initialize the ML Kit Pose Detector
@@ -130,6 +173,31 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
       // Run pose detection
       final poses = await _poseDetector!.processImage(inputImage);
+
+      // Process with biomechanics layer
+      if (poses.isNotEmpty) {
+        final pose = poses.first;
+        
+        // 1. Calculate joint angles
+        final rawAngles = JointAngleCalculator.computeAllAngles(pose);
+        
+        // 2. Smooth angles to reduce noise
+        final validAngles = <String, double>{};
+        rawAngles.forEach((key, value) {
+          if (value != null) {
+            validAngles[key] = value;
+          }
+        });
+        
+        if (_angleSmoother != null && validAngles.isNotEmpty) {
+          _currentAngles = _angleSmoother!.smoothAngles(validAngles);
+          
+          // 3. Detect form anomalies
+          if (_formAnomalyDetector != null) {
+            _formAnomalyDetector!.analyze(_currentAngles);
+          }
+        }
+      }
 
       // Process with RepetitionDetector if pose detected
       if (poses.isNotEmpty && _repetitionDetector != null) {
@@ -322,8 +390,10 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     });
 
     try {
-      final result = await PoseAnalysisService.analyzePoses(
-        _poses,
+      // Send computed angles instead of raw landmarks
+      final result = await PoseAnalysisService.analyzeWithAngles(
+        angles: _currentAngles,
+        formIssues: _currentFormIssues,
         exerciseName: _selectedExercise!,
       );
 
@@ -345,6 +415,38 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
           _errorMessage = 'Error: $e';
         });
       }
+    }
+  }
+
+  /// Analyze a detected form issue with Gemini
+  Future<void> _analyzeFormIssue(FormIssue issue) async {
+    if (_poses.isEmpty || _selectedExercise == null) return;
+
+    try {
+      // Call Gemini for coaching
+      final response = await PoseAnalysisService.analyzeFormIssue(
+        issue: issue,
+        angles: _currentAngles,
+        exerciseName: _selectedExercise!,
+      );
+      
+      // Store coaching response
+      if (mounted && response['success'] == true) {
+        setState(() {
+          _aiCoaching = response['coaching'];
+        });
+        
+        // Clear coaching after 8 seconds
+        Future.delayed(const Duration(seconds: 8), () {
+          if (mounted) {
+            setState(() {
+              _aiCoaching = null;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      print('Error analyzing form issue: $e');
     }
   }
 
@@ -600,6 +702,14 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
                       fontSize: 14,
                     ),
                   ),
+                if (_currentAngles.isNotEmpty)
+                  Text(
+                    'Knee: ${_currentAngles['leftKnee']?.toInt()}° | Hip: ${_currentAngles['leftHip']?.toInt()}°',
+                    style: const TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: 12,
+                    ),
+                  ),
                 if (_debugMessage.isNotEmpty)
                   Text(
                     _debugMessage,
@@ -620,6 +730,155 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
             ),
           ),
         ),
+
+        // Form issues overlay
+        if (_currentFormIssues.isNotEmpty)
+          Positioned(
+            top: 80,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade900.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red, width: 2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Form Issues Detected',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ..._currentFormIssues.take(3).map((issue) {
+                    final color = issue.severity == FormIssueSeverity.critical
+                        ? Colors.red
+                        : issue.severity == FormIssueSeverity.warning
+                            ? Colors.orange
+                            : Colors.yellow;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error, color: color, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              issue.description,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+
+        // AI Coaching overlay (from Gemini)
+        if (_aiCoaching != null)
+          Positioned(
+            bottom: 100,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.shade900.withOpacity(0.95),
+                    Colors.purple.shade900.withOpacity(0.95),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.psychology, color: Colors.white, size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        'AI Coach Says:',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_aiCoaching!['quick_fix'] != null) ...[
+                    const Text(
+                      '💡 Quick Fix:',
+                      style: TextStyle(
+                        color: Colors.yellowAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _aiCoaching!['quick_fix'],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (_aiCoaching!['cue'] != null) ...[
+                    const Text(
+                      '🎯 Remember:',
+                      style: TextStyle(
+                        color: Colors.greenAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _aiCoaching!['cue'],
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
 
         // Exercise selection and analysis panel
         Positioned(
@@ -823,6 +1082,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   void dispose() {
     _cameraController?.dispose();
     _poseDetector?.close();
+    _formIssueSubscription?.cancel();
+    _formAnomalyDetector?.dispose();
     super.dispose();
   }
 }
