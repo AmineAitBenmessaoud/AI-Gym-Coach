@@ -144,12 +144,9 @@ class RepetitionDetector {
               // Valid squat detected!
               shouldCapture = true;
               _lastCaptureTime = DateTime.now();
-              print('🎯 INFLECTION POINT DETECTED!');
-              print(
-                  '   Descent: ${descentAmount.toStringAsFixed(1)}px (${(descentPercentage * 100).toStringAsFixed(1)}% of body height)');
+              // Inflection point detected - ready for analysis
             } else {
-              print(
-                  '⚠️  Descent too shallow: ${(descentPercentage * 100).toStringAsFixed(1)}% (need ${(_minDescentThreshold * 100).toStringAsFixed(1)}%)');
+              // Descent too shallow
             }
           }
         }

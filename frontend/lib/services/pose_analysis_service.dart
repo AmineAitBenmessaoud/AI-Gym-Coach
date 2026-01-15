@@ -1,12 +1,14 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import '../biomechanics/form_anomaly_detector.dart';
 
 /// Service pour communiquer avec le backend et l'API Gemini
 class PoseAnalysisService {
   // Change cette URL selon votre configuration (localhost pour dev, IP du serveur pour prod)
-  static const String baseUrl = 'http://192.168.1.19:5000';
+  static const String baseUrl = 'http://172.26.223.124:5000'; // Connected via phone hotspot
   static const Duration timeout = Duration(seconds: 30);
 
   // Cache pour éviter trop d'appels API
@@ -141,8 +143,94 @@ class PoseAnalysisService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Backend health check failed: $e');
+      debugPrint('⚠️ Backend health check failed: $e');
       return false;
+    }
+  }
+
+  /// NEW: Analyze with computed angles (deterministic biomechanics layer)
+  /// Only called for end-of-set summary or when requested
+  static Future<Map<String, dynamic>> analyzeWithAngles({
+    required Map<String, double> angles,
+    required List<FormIssue> formIssues,
+    required String exerciseName,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/analyze-angles'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'angles': angles,
+              'form_issues': formIssues.map((issue) => issue.toJson()).toList(),
+              'exercise': exerciseName,
+            }),
+          )
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'error': 'Erreur serveur: ${response.statusCode}',
+        };
+      }
+    } on TimeoutException {
+      return {'success': false, 'error': 'Timeout'};
+    } catch (e) {
+      return {'success': false, 'error': 'Erreur: $e'};
+    }
+  }
+
+  /// NEW: Analyze a specific form issue with Gemini
+  /// Only called when critical/warning issues detected
+  static Future<Map<String, dynamic>> analyzeFormIssue({
+    required FormIssue issue,
+    required Map<String, double> angles,
+    required String exerciseName,
+  }) async {
+    try {
+      // Throttle form issue analysis
+      if (_lastAnalysisTime != null) {
+        final timeSince = DateTime.now().difference(_lastAnalysisTime!);
+        if (timeSince < _analysisThrottle) {
+          return {'success': false, 'error': 'Throttled'};
+        }
+      }
+
+      _lastAnalysisTime = DateTime.now();
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/analyze-form-issue'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'issue': issue.toJson(),
+              'angles': angles,
+              'exercise_name': exerciseName,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return {
+          'success': false,
+          'error': 'Erreur serveur: ${response.statusCode}',
+        };
+      }
+    } on TimeoutException {
+      return {'success': false, 'error': 'Timeout'};
+    } catch (e) {
+      return {'success': false, 'error': 'Erreur: $e'};
     }
   }
 }

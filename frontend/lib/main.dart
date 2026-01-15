@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/home_screen.dart';
 
+// Set to false to disable debug logs
+const bool kEnableDebugLogs = false;
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
