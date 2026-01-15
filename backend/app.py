@@ -3,12 +3,6 @@ AI Gym Coach Backend - Flask API
 Receives pose data from Flutter frontend and sends it to Google Gemini API for analysis
 """
 
-from dotenv import load_dotenv
-import os
-
-# Load environment variables FIRST before importing config
-basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, '.env'))
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS

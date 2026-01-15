@@ -1,8 +1,14 @@
 """
 Configuration file for AI Gym Coach Backend
 """
+from dotenv import load_dotenv
 import os
 from typing import Dict, List
+# Load environment variables FIRST before importing config
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
+
+
 
 class Config:
     """Base configuration"""
