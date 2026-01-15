@@ -254,35 +254,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   /// 3. Send to backend for AI analysis
   void captureSnapshot(Pose pose, InputImage image) {
     _captureCount++;
-
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('📸 SNAPSHOT CAPTURED AT BOTTOM OF SQUAT #$_captureCount');
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print(
-      'Image: ${image.metadata?.size.width}x${image.metadata?.size.height}',
-    );
-    print('Pose landmarks: ${pose.landmarks.length}');
-
-    // Extract key landmarks for analysis
-    final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
-    final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
-    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
-    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
-
-    if (leftKnee != null &&
-        rightKnee != null &&
-        leftHip != null &&
-        rightHip != null) {
-      print(
-        'Hip position: L(${leftHip.x.toInt()}, ${leftHip.y.toInt()}) R(${rightHip.x.toInt()}, ${rightHip.y.toInt()})',
-      );
-      print(
-        'Knee position: L(${leftKnee.x.toInt()}, ${leftKnee.y.toInt()}) R(${rightKnee.x.toInt()}, ${rightKnee.y.toInt()})',
-      );
-    }
-
-    print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    print('');
+    // Snapshot captured for analysis
 
     // TODO Phase 3: Replace this with actual API call to Gemini
     // Example:
@@ -301,8 +273,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       final format = InputImageFormatValue.fromRawValue(image.format.raw);
 
       if (format == null) {
-        print('Error: Unsupported image format raw value: ${image.format.raw}');
-        print('Image format group: ${image.format.group}');
+        debugPrint('⚠️ Unsupported image format: raw=${image.format.raw}, group=${image.format.group}');
         return null;
       }
 
@@ -310,8 +281,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       if (format != InputImageFormat.nv21 &&
           format != InputImageFormat.yuv420 &&
           format != InputImageFormat.bgra8888) {
-        print('Error: Format $format not supported by ML Kit');
-        print('Supported formats: nv21, yuv420, bgra8888');
+        debugPrint('⚠️ Format $format not supported by ML Kit (supported: nv21, yuv420, bgra8888)');
         return null;
       }
 
@@ -333,7 +303,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
       return InputImage.fromBytes(bytes: bytes, metadata: inputImageData);
     } catch (e) {
-      print('Error converting image: $e');
+      debugPrint('⚠️ Image conversion error: $e');
       return null;
     }
   }
@@ -364,7 +334,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         });
       }
     } catch (e) {
-      print('Error getting real-time feedback: $e');
+      debugPrint('⚠️ Real-time feedback error: $e');
     }
   }
 
@@ -446,7 +416,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         });
       }
     } catch (e) {
-      print('Error analyzing form issue: $e');
+      debugPrint('⚠️ Form analysis error: $e');
     }
   }
 

@@ -1,13 +1,14 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import '../biomechanics/form_anomaly_detector.dart';
 
 /// Service pour communiquer avec le backend et l'API Gemini
 class PoseAnalysisService {
   // Change cette URL selon votre configuration (localhost pour dev, IP du serveur pour prod)
-  static const String baseUrl = 'http://192.168.1.3:5000';
+  static const String baseUrl = 'http://172.26.223.124:5000'; // Connected via phone hotspot
   static const Duration timeout = Duration(seconds: 30);
 
   // Cache pour éviter trop d'appels API
@@ -142,7 +143,7 @@ class PoseAnalysisService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Backend health check failed: $e');
+      debugPrint('⚠️ Backend health check failed: $e');
       return false;
     }
   }
