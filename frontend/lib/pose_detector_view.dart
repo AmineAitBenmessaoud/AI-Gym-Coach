@@ -513,24 +513,24 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         // Camera preview
         CameraPreview(cameraController),
 
-        // Pose overlay
-        if (_poses.isNotEmpty)
-          CustomPaint(
-            painter: PosePainter(
-              poses: _poses,
-              translator: CoordinateTranslator(
-                imageSize: getImageSize(cameraController),
-                screenSize: size,
-                rotation: rotationIntToImageRotation(
-                  getRotation(cameraController),
-                ),
-                cameraLensDirection: cameraController.description.lensDirection,
-                calibrationOffsetX: _calibrationOffsetX,
-                calibrationOffsetY: _calibrationOffsetY,
-                calibrationScale: _calibrationScale,
-              ),
-            ),
-          ),
+        // Pose overlay - disabled
+        // if (_poses.isNotEmpty)
+        //   CustomPaint(
+        //     painter: PosePainter(
+        //       poses: _poses,
+        //       translator: CoordinateTranslator(
+        //         imageSize: getImageSize(cameraController),
+        //         screenSize: size,
+        //         rotation: rotationIntToImageRotation(
+        //           getRotation(cameraController),
+        //         ),
+        //         cameraLensDirection: cameraController.description.lensDirection,
+        //         calibrationOffsetX: _calibrationOffsetX,
+        //         calibrationOffsetY: _calibrationOffsetY,
+        //         calibrationScale: _calibrationScale,
+        //       ),
+        //     ),
+        //   ),
 
         // Calibration controls
         if (_showCalibration)
@@ -641,65 +641,65 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
             ),
           ),
 
-        // FPS and detection info overlay
-        Positioned(
-          bottom: 16,
-          left: 16,
-          right: 16,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Poses Detected: ${_poses.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (_poses.isNotEmpty)
-                  Text(
-                    'Landmarks: ${_poses.first.landmarks.length}',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 14,
-                    ),
-                  ),
-                if (_currentAngles.isNotEmpty)
-                  Text(
-                    'Knee: ${_currentAngles['leftKnee']?.toInt()}° | Hip: ${_currentAngles['leftHip']?.toInt()}°',
-                    style: const TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 12,
-                    ),
-                  ),
-                if (_debugMessage.isNotEmpty)
-                  Text(
-                    _debugMessage,
-                    style: const TextStyle(
-                      color: Colors.blueAccent,
-                      fontSize: 12,
-                    ),
-                  ),
-                if (_errorMessage != null)
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 12,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
+        // FPS and detection info overlay - disabled
+        // Positioned(
+        //   bottom: 16,
+        //   left: 16,
+        //   right: 16,
+        //   child: Container(
+        //     padding: const EdgeInsets.all(12),
+        //     decoration: BoxDecoration(
+        //       color: Colors.black87,
+        //       borderRadius: BorderRadius.circular(8),
+        //     ),
+        //     child: Column(
+        //       crossAxisAlignment: CrossAxisAlignment.start,
+        //       mainAxisSize: MainAxisSize.min,
+        //       children: [
+        //         Text(
+        //           'Poses Detected: ${_poses.length}',
+        //           style: const TextStyle(
+        //             color: Colors.white,
+        //             fontSize: 16,
+        //             fontWeight: FontWeight.bold,
+        //           ),
+        //         ),
+        //         if (_poses.isNotEmpty)
+        //           Text(
+        //             'Landmarks: ${_poses.first.landmarks.length}',
+        //             style: const TextStyle(
+        //               color: Colors.greenAccent,
+        //               fontSize: 14,
+        //             ),
+        //           ),
+        //         if (_currentAngles.isNotEmpty)
+        //           Text(
+        //             'Knee: ${_currentAngles['leftKnee']?.toInt()}° | Hip: ${_currentAngles['leftHip']?.toInt()}°',
+        //             style: const TextStyle(
+        //               color: Colors.cyanAccent,
+        //               fontSize: 12,
+        //             ),
+        //           ),
+        //         if (_debugMessage.isNotEmpty)
+        //           Text(
+        //             _debugMessage,
+        //             style: const TextStyle(
+        //               color: Colors.blueAccent,
+        //               fontSize: 12,
+        //             ),
+        //           ),
+        //         if (_errorMessage != null)
+        //           Text(
+        //             _errorMessage!,
+        //             style: const TextStyle(
+        //               color: Colors.redAccent,
+        //               fontSize: 12,
+        //             ),
+        //           ),
+        //       ],
+        //     ),
+        //   ),
+        // ),
 
         // Form issues overlay
         if (_currentFormIssues.isNotEmpty)
@@ -851,7 +851,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
           ),
 
         // Exercise selection and analysis panel
-        Positioned(
+        /*Positioned(
           top: 80,
           right: 16,
           child: Container(
@@ -931,7 +931,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
               ],
             ),
           ),
-        ),
+        ),*/
 
         // Analysis results panel
         if (_lastAnalysis != null)
