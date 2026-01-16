@@ -43,3 +43,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Removed platform folders (Android-only project)
+/ios/
+/web/
+/windows/
+/linux/
+/macos/
+
+# Additional Android build artifacts
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/captures/
+/android/local.properties
+*.apk
+*.aab
