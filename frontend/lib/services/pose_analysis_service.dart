@@ -37,52 +37,6 @@ class PoseAnalysisService {
     return {'landmarks': landmarks};
   }
 
-  /// Envoie les poses au backend pour analyse détaillée
-  static Future<Map<String, dynamic>> analyzePoses(
-    List<Pose> poses, {
-    String? exerciseName,
-  }) async {
-    try {
-      if (poses.isEmpty) {
-        return {'success': false, 'error': 'Aucune pose détectée'};
-      }
-
-      // Optimisation: prendre seulement la première pose (la plus confiante généralement)
-      final posesJson = [_poseToJson(poses.first)];
-
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/analyze-poses'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode({
-              'poses': posesJson,
-              if (exerciseName != null) 'exercise': exerciseName,
-            }),
-          )
-          .timeout(timeout);
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        return result;
-      } else {
-        return {
-          'success': false,
-          'error': 'Erreur serveur: ${response.statusCode} - ${response.body}',
-        };
-      }
-    } on TimeoutException {
-      return {
-        'success': false,
-        'error': 'Délai d\'attente dépassé. Vérifiez votre connexion.',
-      };
-    } catch (e) {
-      return {'success': false, 'error': 'Erreur de connexion: $e'};
-    }
-  }
-
   /// Envoie les poses pour un retour en temps réel
   static Future<Map<String, dynamic>> getRealTimeFeedback(
     List<Pose> poses, {
