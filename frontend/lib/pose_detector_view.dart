@@ -7,6 +7,7 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'pose_painter.dart';
 import 'utils.dart';
 import 'services/pose_analysis_service.dart';
+import 'services/tts_service.dart';
 import 'rep_detector.dart';
 import 'biomechanics/joint_angle_calculator.dart';
 import 'biomechanics/angle_smoother.dart';
@@ -58,6 +59,10 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   List<FormIssue> _currentFormIssues = [];
   Map<String, double> _currentAngles = {};
   Map<String, dynamic>? _aiCoaching; // Gemini coaching response
+  
+  // Text-to-Speech
+  final TtsService _ttsService = TtsService();
+  bool _enableTts = true;
 
   @override
   void initState() {
@@ -66,6 +71,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     _repetitionDetector = RepetitionDetector();
     _selectedExercise = widget.selectedExercise ?? 'squat';
     _initializeBiomechanicsLayer();
+    _ttsService.initialize();
   }
 
   /// Initialize biomechanics analysis layer
@@ -328,10 +334,15 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
       if (result['success'] == true && mounted) {
         final feedback = result['feedback'] ?? {};
+        final immediateAction = feedback['immediate_action'] ?? 'Analysis in progress...';
         setState(() {
-          _debugMessage =
-              feedback['immediate_action'] ?? 'Analysis in progress...';
+          _debugMessage = immediateAction;
         });
+        
+        // Speak the immediate action
+        if (_enableTts) {
+          _ttsService.speak(immediateAction, interrupt: false);
+        }
       }
     } catch (e) {
       debugPrint('⚠️ Real-time feedback error: $e');
@@ -373,6 +384,11 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
           if (result['success'] == true) {
             _lastAnalysis = result['analysis'];
             _errorMessage = null;
+            
+            // Speak encouragement from analysis
+            if (_enableTts && _lastAnalysis?['encouragement'] != null) {
+              _ttsService.speak(_lastAnalysis!['encouragement'], interrupt: false);
+            }
           } else {
             _errorMessage = result['error'] ?? 'Analysis failed';
           }
@@ -402,9 +418,15 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
       
       // Store coaching response
       if (mounted && response['success'] == true) {
+        final coaching = response['coaching'];
         setState(() {
-          _aiCoaching = response['coaching'];
+          _aiCoaching = coaching;
         });
+        
+        // Speak the quick fix instruction
+        if (_enableTts && coaching != null && coaching['quick_fix'] != null) {
+          _ttsService.speak(coaching['quick_fix'], interrupt: true);
+        }
         
         // Clear coaching after 8 seconds
         Future.delayed(const Duration(seconds: 8), () {
@@ -457,6 +479,22 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
               });
             },
             tooltip: 'Real-time Feedback',
+          ),
+          // TTS toggle button
+          IconButton(
+            icon: Icon(
+              _enableTts ? Icons.volume_up : Icons.volume_off,
+              color: _enableTts ? Colors.green : Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _enableTts = !_enableTts;
+              });
+              if (!_enableTts) {
+                _ttsService.stop();
+              }
+            },
+            tooltip: _enableTts ? 'Mute Voice' : 'Enable Voice',
           ),
           // Camera flip button
           IconButton(
@@ -1054,6 +1092,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
     _poseDetector?.close();
     _formIssueSubscription?.cancel();
     _formAnomalyDetector?.dispose();
+    _ttsService.dispose();
     super.dispose();
   }
 }

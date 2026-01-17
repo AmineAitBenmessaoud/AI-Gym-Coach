@@ -25,6 +25,9 @@ dependencies:
   # HTTP Client for Backend Communication
   http: ^1.1.0
 
+  # Text-to-Speech
+  flutter_tts: ^4.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
