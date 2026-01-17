@@ -37,7 +37,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   bool _isProcessing = false;
   bool _isCameraInitialized = false;
   List<Pose> _poses = [];
-  int _currentCameraIndex = 0;
+  int _currentCameraIndex = 1; // Start with front camera
   List<CameraDescription> _cameras = [];
   String _debugMessage = '';
   String? _errorMessage;
@@ -63,15 +63,46 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
   // Text-to-Speech
   final TtsService _ttsService = TtsService();
   bool _enableTts = true;
+  
+  // Countdown timer
+  int _countdownSeconds = 10;
+  bool _isCountdownActive = true;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
-    _initializePoseDetector();
-    _repetitionDetector = RepetitionDetector();
     _selectedExercise = widget.selectedExercise ?? 'squat';
+    _repetitionDetector = RepetitionDetector();
     _initializeBiomechanicsLayer();
     _ttsService.initialize();
+    _startCountdown();
+  }
+  
+  /// Start the countdown before initializing camera
+  void _startCountdown() {
+    setState(() {
+      _isCountdownActive = true;
+      _countdownSeconds = 10;
+    });
+    
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdownSeconds > 1) {
+        setState(() {
+          _countdownSeconds--;
+        });
+      } else {
+        timer.cancel();
+        setState(() {
+          _isCountdownActive = false;
+        });
+        // Start camera and pose detector after countdown
+        if (_cameras.isNotEmpty) {
+          _initializeCamera(1); // Use front camera (index 1)
+        }
+        _initializePoseDetector();
+      }
+    });
   }
 
   /// Initialize biomechanics analysis layer
@@ -508,8 +539,83 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
         data: (cameras) {
           if (_cameras.isEmpty) {
             _cameras = cameras;
-            // Initialize with back camera (index 0 is usually back)
-            _initializeCamera(0);
+            // Don't initialize camera yet if countdown is active
+            if (!_isCountdownActive) {
+              _initializeCamera(1); // Use front camera (index 1)
+            }
+          }
+
+          // Show countdown overlay during countdown period
+          if (_isCountdownActive) {
+            return Container(
+              color: Colors.black.withOpacity(0.85),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.timer,
+                      size: 80,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Get Ready!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.green,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.5),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$_countdownSeconds',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 72,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Position yourself in frame',
+                      style: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'AI Coach starts in $_countdownSeconds seconds',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           if (!_isCameraInitialized || _cameraController == null) {
@@ -1088,6 +1194,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> {
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _cameraController?.dispose();
     _poseDetector?.close();
     _formIssueSubscription?.cancel();
